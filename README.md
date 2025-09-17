@@ -61,8 +61,8 @@ streamlit run app.py
 |------|------|------|
 | 项目ID | Rosetta平台中的项目标识 | 3603 |
 | 池子ID | 项目中的数据池标识 | 71383, 71389 |
-| 用户名 | Rosetta平台登录账号 | 15931113754 |
-| 密码 | Rosetta平台登录密码 | Rosetta@0103 |
+| 用户名 | Rosetta平台登录账号 | your_username |
+| 密码 | Rosetta平台登录密码 | your_password |
 
 ### 高级选项
 
@@ -134,10 +134,10 @@ frame_extraction_streamlit/
    在Streamlit Cloud部署时，需要在应用设置中配置以下secrets：
 
    ```toml
-   [rosetta_credentials]
-   username = "your_rosetta_username"
-   password = "your_rosetta_password"
-   ```
+[rosetta_credentials]
+username = "your_username_here"
+password = "your_password_here"
+```
 
 3. **部署应用**
    - 访问 [share.streamlit.io](https://share.streamlit.io)
@@ -147,17 +147,13 @@ frame_extraction_streamlit/
 
 ### 账号配置说明
 
-应用支持两种账号配置方式：
+应用设计为仅在Streamlit Cloud中运行，账号信息通过Streamlit Cloud的secrets功能安全存储：
 
-1. **Streamlit Cloud部署模式**（推荐）
-   - 使用 `st.secrets` 读取账号信息
-   - 账号信息通过Streamlit Cloud的secrets功能安全存储
-   - 界面中隐藏账号管理功能
-
-2. **本地开发模式**
-   - 使用session_state存储账号信息
-   - 通过界面输入和管理账号
-   - 适合本地测试和开发
+**Streamlit Cloud部署模式**（唯一支持的方式）
+- 使用 `st.secrets` 读取账号信息
+- 账号信息通过Streamlit Cloud的secrets功能安全存储
+- 不会在代码或界面中暴露任何账号信息
+- 确保代码可以安全推送到Git仓库
 
 ### 环境变量配置
 
@@ -165,8 +161,8 @@ frame_extraction_streamlit/
 
 ```toml
 [rosetta_credentials]
-username = "15931113754"  # 替换为您的用户名
-password = "Rosetta@0103"  # 替换为您的密码
+username = "your_username"  # 替换为您的用户名
+password = "your_password"  # 替换为您的密码
 ```
 
 ### 部署注意事项

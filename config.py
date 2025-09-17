@@ -98,8 +98,8 @@ class StreamlitConfig:
             'project_id': 3603,
             'pool_ids': [71383, 71389, 71394, 71399],
             'project_name': '测试项目',
-            'username': '15931113754',
-            'password': 'Rosetta@0103',
+            'username': 'your_username',
+            'password': 'your_password',
             'test_mode': False,
             'enable_extraction': True,
             'check_pool': False  # 默认使用完成池
