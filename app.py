@@ -357,20 +357,16 @@ def main():
             
             # 结果信息
             with st.expander("📋 处理结果", expanded=True):
-                st.json({
-                    "项目ID": result['project_id'],
-                    "状态": result['status'],
-                    "大小": result.get('size', '未知'),
-                    "拆帧状态": "已启用" if result.get('frame_extraction') else "未启用"
-                })
+                st.write(f"**项目ID:** {result['project_id']}")
+                st.write(f"**状态:** {result['status']}")
+                st.write(f"**大小:** {result.get('size', '未知')}")
+                st.write(f"**拆帧状态:** {'已启用' if result.get('frame_extraction') else '未启用'}")
             
             # 文件列表
             if result.get('files'):
                 with st.expander("📁 文件列表"):
-                    files_info = {}
                     for filename, data in result['files'].items():
-                        files_info[filename] = f"{format_file_size(len(data))}"
-                    st.json(files_info)
+                        st.write(f"📄 {filename} ({format_file_size(len(data))})")
             
             # 下载按钮
             if result.get('zip_data'):
