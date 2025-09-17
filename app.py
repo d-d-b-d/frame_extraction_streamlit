@@ -184,8 +184,7 @@ def main():
             # Streamlit Cloud模式
             try:
                 # 检查是否使用st.secrets
-                st.secrets["rosetta_credentials"]
-                st.info("🔐 账号信息已通过Streamlit Cloud配置")
+                st.info("账号信息已通过Streamlit Cloud配置")
                 with st.expander("ℹ️ 账号配置说明", expanded=False):
                     st.markdown("""
                     **当前配置状态：**
