@@ -279,14 +279,14 @@ def main():
             st.info("🔧 请部署到Streamlit Cloud或在本地创建.secrets.toml文件")
             return
         
-        # 检查账号配置
-        try:
-            # 验证Streamlit Cloud配置
-            st.secrets["rosetta_credentials"]
-        except (KeyError, FileNotFoundError):
-            st.error("❌ 无法开始处理：账号信息未在Streamlit Cloud中配置")
-            st.info("🔧 请先在Streamlit Cloud中配置账号信息")
-            return
+        # # 检查账号配置
+        # try:
+        #     # 验证Streamlit Cloud配置
+        #     st.secrets["rosetta_credentials"]
+        # except (KeyError, FileNotFoundError):
+        #     st.error("❌ 无法开始处理：账号信息未在Streamlit Cloud中配置")
+        #     st.info("🔧 请先在Streamlit Cloud中配置账号信息")
+        #     return
         
         # 验证输入
         try:
