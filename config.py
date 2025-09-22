@@ -60,7 +60,8 @@ class StreamlitConfig:
         Returns:
             Dict[str, Any]: 配置字典
         """
-        return {
+        # 基础配置
+        config = {
             'debug': {
                 'log_level': 'INFO',
                 'test_mode': params.get('test_mode', False)
@@ -91,6 +92,19 @@ class StreamlitConfig:
                 'password': params['password']
             }
         }
+        
+        # 如果是大文件模式，添加路径配置
+        if params.get('use_big_file_mode', False):
+            # 创建基础路径
+            base_path = '/Users/Apple/stardust/download'
+            config['paths'] = {
+                'base_path': base_path,
+                'download_path': base_path,
+                'result_path': os.path.join(base_path, 'results'),
+                'temp_path': os.path.join(base_path, 'temp')
+            }
+        
+        return config
     
     def get_default_params(self) -> Dict[str, Any]:
         """获取默认参数"""
