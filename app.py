@@ -52,64 +52,32 @@ def process_project_async(params: Dict[str, Any], progress_callback):
         config = config_manager.create_memory_config(params)
         progress_callback(20, "配置准备完成")
         
-        # 检查是否使用大文件模式
-        if params.get('use_big_file_mode', False):
-            # 使用大文件处理管道
-            from big_file_pipeline import BigFileProcessingPipeline
-            pipeline = BigFileProcessingPipeline(config)
-            progress_callback(40, "大文件处理管道初始化完成")
-            
-            # 处理大文件项目
-            result = pipeline.process_large_project(progress_callback)
-            progress_callback(80, "大文件处理完成")
-            
-            # 创建结果归档
-            zip_path = pipeline.create_result_archive(result)
-            progress_callback(90, "结果归档创建完成")
-            
-            # 读取ZIP文件数据
-            with open(zip_path, 'rb') as f:
-                zip_data = f.read()
-            
-            progress_callback(100, "处理完成")
-            
-            return {
-                'project_id': result['project_id'],
-                'zip_data': zip_data,
-                'status': result['status'],
-                'size': format_file_size(len(zip_data)),
-                'frame_extraction': result.get('frame_extraction', False),
-                'message': result.get('message', '大文件处理完成'),
-                'is_big_file_mode': True
-            }
-        else:
-            # 使用内存处理管道（原有逻辑）
-            pipeline = MemoryExtractionPipeline(config)
-            progress_callback(40, "处理管道初始化完成")
-            
-            # 处理项目
-            result = pipeline.process_single_project()
-            progress_callback(80, "项目处理完成")
-            
-            # 创建结果ZIP文件
-            zip_data = pipeline.create_result_zip(result)
-            progress_callback(90, "结果打包完成")
-            
-            # 计算大小
-            size = len(zip_data)
-            
-            progress_callback(100, "处理完成")
-            
-            return {
-                'project_id': result['project_id'],
-                'files': result.get('files', {}),
-                'zip_data': zip_data,
-                'status': result['status'],
-                'size': format_file_size(size),
-                'frame_extraction': result.get('frame_extraction', False),
-                'message': result.get('message', '处理完成'),
-                'is_big_file_mode': False
-            }
+        # 初始化内存管道
+        pipeline = MemoryExtractionPipeline(config)
+        progress_callback(40, "处理管道初始化完成")
+        
+        # 处理项目
+        result = pipeline.process_single_project()
+        progress_callback(80, "项目处理完成")
+        
+        # 创建结果ZIP文件
+        zip_data = pipeline.create_result_zip(result)
+        progress_callback(90, "结果打包完成")
+        
+        # 计算大小
+        size = len(zip_data)
+        
+        progress_callback(100, "处理完成")
+        
+        return {
+            'project_id': result['project_id'],
+            'files': result.get('files', {}),
+            'zip_data': zip_data,
+            'status': result['status'],
+            'size': format_file_size(size),
+            'frame_extraction': result.get('frame_extraction', False),
+            'message': result.get('message', '处理完成')
+        }
         
     except Exception as e:
         raise Exception(f"项目处理失败: {str(e)}")
@@ -205,10 +173,6 @@ def main():
                            index=0,
                            help="选择要处理的池子类型：完成池或抽查池")
         check_pool = pool_type == "抽查池"
-        
-        # 大文件模式选项
-        use_big_file_mode = st.checkbox("大文件模式", value=False,
-                                       help="对于非常大的文件，使用OSS下载模式（推荐用于GB级别的大项目）")
         
         test_mode = st.checkbox("测试模式", value=False, 
                                help="跳过数据下载，使用已有数据")
@@ -353,8 +317,7 @@ def main():
             'password': password,
             'test_mode': test_mode,
             'enable_extraction': enable_extraction,
-            'check_pool': check_pool,
-            'use_big_file_mode': use_big_file_mode
+            'check_pool': check_pool
         }
         
         # 开始处理
@@ -397,7 +360,6 @@ def main():
                 st.write(f"**状态:** {result['status']}")
                 st.write(f"**大小:** {result.get('size', '未知')}")
                 st.write(f"**拆帧状态:** {'已启用' if result.get('frame_extraction') else '未启用'}")
-                st.write(f"**处理模式:** {'大文件模式' if result.get('is_big_file_mode') else '内存模式'}")
             
             # 文件列表
             if result.get('files'):
