@@ -10,7 +10,3 @@ __author__ = "Data Team"
 from .downloader import RosettaDownloader
 from .extractor import FrameExtractor
 from .pipeline import ExtractionPipeline
-from .memory_client import MemoryRosettaClient, MemoryFrameExtractor
-from .smart_memory_client import SmartMemoryRosettaClient
-from .memory_pipeline import MemoryExtractionPipeline
-from .rosetta_client import GetRosData, Auth

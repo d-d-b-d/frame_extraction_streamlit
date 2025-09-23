@@ -8,7 +8,7 @@ import zipfile
 import json
 import os
 from typing import Dict, Any, Optional, List
-from .rosetta_client import GetRosData, Auth
+from rosetta_client import GetRosData, Auth
 
 
 class MemoryRosettaClient(GetRosData):

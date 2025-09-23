@@ -6,8 +6,8 @@
 import io
 import json
 from typing import Dict, Any, Optional
-from .memory_client import MemoryRosettaClient, MemoryFrameExtractor
-from .smart_memory_client import SmartMemoryRosettaClient
+from memory_client import MemoryRosettaClient, MemoryFrameExtractor
+from smart_memory_client import SmartMemoryRosettaClient
 
 
 class MemoryExtractionPipeline:
