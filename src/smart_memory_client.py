@@ -32,6 +32,16 @@ spec2 = importlib.util.spec_from_file_location(
 get_rosetta_json_big_backdoor = importlib.util.module_from_spec(spec2)
 spec2.loader.exec_module(get_rosetta_json_big_backdoor)
 
+import importlib.util
+import sys
+import os
+import requests
+import zipfile
+import io
+import json
+from typing import Dict, Optional
+from requests.exceptions import RequestException, Timeout, ConnectionError
+
 class SmartMemoryRosettaClient:
     """智能内存版Rosetta数据客户端 - 支持自动故障转移"""
     
@@ -103,13 +113,17 @@ class SmartMemoryRosettaClient:
                 response = requests.post(
                     self.standard_client.get_url,
                     json=self.standard_client.req_data,
-                    headers=self.standard_client.get_headers()
+                    headers=self.standard_client.get_headers(),
+                    timeout=30  # 添加超时时间
                 )
                 
                 print(f"标准接口响应状态码: {response.status_code}")
                 print(f"标准接口响应大小: {len(response.content)} bytes")
                 
-                if response.status_code == 200 and len(response.content) > 160:
+                # 处理504超时错误
+                if response.status_code == 504:
+                    print("⚠️  标准接口超时(504)，将自动切换到大文件接口")
+                elif response.status_code == 200 and len(response.content) > 160:
                     # 检查是否为空ZIP
                     if not self._is_zip_data_empty(response.content):
                         print("✅ 标准接口下载成功")
@@ -119,8 +133,12 @@ class SmartMemoryRosettaClient:
                 else:
                     print(f"⚠️  标准接口响应异常，状态码: {response.status_code}")
                     
+            except (Timeout, ConnectionError) as e:
+                print(f"⚠️  标准接口连接超时或失败: {str(e)}，将切换到大文件接口")
+            except RequestException as e:
+                print(f"❌ 标准接口请求失败: {str(e)}")
             except Exception as e:
-                print(f"❌ 标准接口失败: {str(e)}")
+                print(f"❌ 标准接口其他错误: {str(e)}")
         else:
             print("⚠️  标准客户端不可用，直接尝试大文件接口")
         
@@ -133,7 +151,8 @@ class SmartMemoryRosettaClient:
                 response = requests.post(
                     self.bigfile_client.get_url,
                     json=self.bigfile_client.req_data,
-                    headers=self.bigfile_client.get_headers()
+                    headers=self.bigfile_client.get_headers(),
+                    timeout=60  # 大文件接口可能需要更长时间
                 )
                 
                 print(f"大文件接口响应状态码: {response.status_code}")
@@ -239,10 +258,27 @@ class SmartMemoryRosettaClient:
             Dict[str, bytes]: 文件路径到文件内容的映射
         """
         print("开始智能下载数据到内存...")
-        zip_data = self.smart_download()
-        print("数据下载完成，开始解压到内存...")
         
-        files = self.extract_zip_to_memory(zip_data)
-        print(f"数据解压完成，共 {len(files)} 个文件")
+        # 添加重试机制
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                zip_data = self.smart_download()
+                print("数据下载完成，开始解压到内存...")
+                
+                files = self.extract_zip_to_memory(zip_data)
+                print(f"数据解压完成，共 {len(files)} 个文件")
+                
+                return files
+                
+            except Exception as e:
+                print(f"第 {attempt + 1} 次尝试失败: {str(e)}")
+                if attempt < max_retries - 1:
+                    print(f"等待 {2 ** attempt} 秒后重试...")
+                    import time
+                    time.sleep(2 ** attempt)  # 指数退避
+                else:
+                    print("所有重试都失败了")
+                    raise
         
-        return files
+        raise Exception("下载失败，已达到最大重试次数")
