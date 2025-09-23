@@ -1,6 +1,7 @@
 """
 智能内存版Rosetta客户端
 支持自动故障转移，优先使用标准接口，失败后切换到大文件接口
+集成了标准接口和大文件接口的功能
 """
 
 import io
@@ -10,15 +11,205 @@ import os
 import requests
 import random
 import time
+import shutil
 from typing import Dict, Any, Optional, List
 
-import sys
-import os
-sys.path.append('/Users/Apple/task/integrate')
+# OSS支持（大文件接口需要）
+try:
+    import oss2
+    OSS_AVAILABLE = True
+except ImportError:
+    OSS_AVAILABLE = False
+    print("⚠️  OSS库不可用，大文件接口功能受限")
 
-# 直接导入模块而不是动态导入
-from get_rosetta_json import GetRosData as StandardClient
-from get_rosetta_json_big_backdoor import GetRosData as BigFileClient
+
+class Auth:
+    """认证类"""
+    
+    def __init__(self, use_dev=False):
+        """
+        Args:
+            use_dev: 是否使用开发环境
+        """
+        if use_dev:
+            self.login_url = 'https://dev-server.rosettalab.top/rosetta-service/user/login'
+        else:
+            self.login_url = 'https://server.rosettalab.top/rosetta-service/user/login'
+
+    def get_authorize(self, username=None, password=None):
+        """获取认证token
+        
+        Args:
+            username: 用户名，如果为None需要用户输入
+            password: 密码，如果为None需要用户输入
+        """
+        # 优先使用传入的用户名密码，其次尝试从配置文件读取，最后提示用户输入
+        username = username or os.getenv('ROSETTA_USERNAME')
+        password = password or os.getenv('ROSETTA_PASSWORD')
+        
+        if not username or not password:
+            raise ValueError("请提供Rosetta认证信息：\n"
+                           "1. 在config.yaml中配置rosetta.username和rosetta.password\n"
+                           "2. 或者设置环境变量ROSETTA_USERNAME和ROSETTA_PASSWORD\n"
+                           "3. 或者在运行时通过命令行参数提供")
+
+        data = {
+            "username": username,
+            "password": password
+        }
+        data = json.dumps(data, separators=(',', ':'))
+        
+        response = requests.post(self.login_url, headers={
+            "accept": "application/json, text/plain, */*",
+            "content-type": "application/json",
+        }, data=data)
+        
+        response_data = response.json()
+        
+        if 'data' not in response_data or 'tokenValue' not in response_data['data']:
+            error_msg = "认证失败"
+            if 'message' in response_data:
+                error_msg += f": {response_data['message']}"
+            elif 'msg' in response_data:
+                error_msg += f": {response_data['msg']}"
+            else:
+                error_msg += f": {response_data}"
+            raise ValueError(error_msg)
+        
+        return response_data['data']['tokenValue']
+
+
+class StandardClient(Auth):
+    """标准接口客户端"""
+    
+    def __init__(self, project_id, pool_id: list, save_path='./', _type=1, 
+                 is_check_pool=False, use_dev=False, username=None, password=None):
+        """
+        Args:
+            project_id: 项目ID
+            pool_id: 池子ID列表
+            save_path: 保存路径
+            _type: 下载类型，0为平台导出，1为任务导出
+            is_check_pool: 是否检查池子状态
+            use_dev: 是否使用开发环境
+            username: 用户名
+            password: 密码
+        """
+        super().__init__(use_dev)
+        
+        if use_dev:
+            self.get_url = 'https://dev-server.rosettalab.top/rosetta-service/project/doneTask/export'
+        else:
+            self.get_url = 'https://server.rosettalab.top/rosetta-service/project/doneTask/export'
+
+        self.project_id = project_id
+        self.pool_id = pool_id
+        self.username = username
+        self.password = password
+        
+        self.req_data = {"projectId": project_id, "poolId": pool_id, "type": _type}
+        if is_check_pool:
+            self.req_data["poolType"] = 3
+            
+        self.save_path = save_path
+        self.save_file = os.path.join(save_path, f"{self.project_id}.zip")
+        os.makedirs(save_path, exist_ok=True)
+
+    def _generate_session_id(self):
+        """生成会话ID"""
+        n = [''] * 20
+        o = list(str(int(time.time() * 1000))[::-1])
+        for i in range(20):
+            e = random.randint(0, 35)
+            t = str(e if e < 26 else chr(e + 87))
+            n[i] = t if e % 3 else t.upper()
+        for i in range(8):
+            n.insert(3 * i + 2, o[i])
+        return ''.join(n[::-1])
+
+    def get_headers(self):
+        """获取请求头"""
+        return {
+            "authority": "server.rosettalab.top",
+            "accept": "application/json, text/plain, */*",
+            "accept-language": "zh-CN",
+            "authorize": self.get_authorize(self.username, self.password),
+            "content-type": "application/json",
+            "eagleeye-pappname": "ez9nyt1o1w@97036bb7d21afb4",
+            "eagleeye-sessionid": self._generate_session_id(),
+            "eagleeye-traceid": "bdc52817169027484816010061afb4",
+            "origin": "https://rosettalab.top",
+            "referer": "https://rosettalab.top/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"111\", \"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"111\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"macOS\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-site",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+        }
+
+
+class BigFileClient(Auth):
+    """大文件接口客户端"""
+    
+    def __init__(self, project_id, pool_id: list, save_path='./', _type=0, 
+                 is_check_pool=False, use_dev=False, username=None, password=None):
+        """
+        Args:
+            project_id: 项目ID
+            pool_id: 池子ID列表
+            save_path: 保存路径
+            _type: 下载类型，0为平台导出，1为任务导出
+            is_check_pool: 是否检查池子状态
+            use_dev: 是否使用开发环境
+            username: 用户名
+            password: 密码
+        """
+        super().__init__(use_dev)
+        
+        # 大文件接口使用特殊的URL
+        self.get_url = 'https://server.rosettalab.top/rosetta-service/backDoor/queryProjectExportLog'
+        
+        self.project_id = project_id
+        self.pool_id = pool_id
+        self.username = username
+        self.password = password
+        
+        # 大文件接口需要特殊的请求数据格式
+        self.req_data = {"projectId": project_id, "poolId": str(pool_id[0]), "type": _type}
+        if is_check_pool:
+            self.req_data["poolType"] = 3
+            
+        self.save_path = save_path
+        self.save_file = os.path.join(save_path, f"{self.project_id}.zip")
+        os.makedirs(save_path, exist_ok=True)
+
+    def get_headers(self):
+        """获取大文件接口的请求头"""
+        def generate_string():
+            n = [''] * 20
+            o = list(str(int(time.time() * 1000))[::-1])
+            for i in range(20):
+                e = random.randint(0, 35)
+                t = str(e if e < 26 else chr(e + 87))
+                n[i] = t if e % 3 else t.upper()
+            for i in range(8):
+                n.insert(3 * i + 2, o[i])
+            return ''.join(n[::-1])
+
+        return {
+            'userId': '170152',
+            'teamId': '0',
+            'Authorize': self.get_authorize(self.username, self.password),
+            'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
+            'Content-Type': 'application/json',
+            'Accept': '*/*',
+            'Cache-Control': 'no-cache',
+            'Host': 'server.rosettalab.top',
+            'Connection': 'keep-alive',
+        }
+
 
 class SmartMemoryRosettaClient:
     """智能内存版Rosetta数据客户端 - 支持自动故障转移"""
@@ -56,7 +247,10 @@ class SmartMemoryRosettaClient:
                 pool_id=self.pool_id,
                 save_path='/tmp',  # 临时路径，实际不会用到
                 _type=self._type,
-                is_check_pool=self.is_check_pool
+                is_check_pool=self.is_check_pool,
+                use_dev=self.use_dev,
+                username=self.username,
+                password=self.password
             )
             print("✅ 标准客户端初始化成功")
         except Exception as e:
@@ -69,7 +263,10 @@ class SmartMemoryRosettaClient:
                 pool_id=self.pool_id,
                 save_path='/tmp',  # 临时路径，实际不会用到
                 _type=self._type,
-                is_check_pool=self.is_check_pool
+                is_check_pool=self.is_check_pool,
+                use_dev=self.use_dev,
+                username=self.username,
+                password=self.password
             )
             print("✅ 大文件客户端初始化成功")
         except Exception as e:
@@ -176,12 +373,17 @@ class SmartMemoryRosettaClient:
         Returns:
             bytes: 文件内容
         """
-        try:
-            # 导入OSS相关库（延迟导入，避免不必要的依赖）
-            import oss2
+        if not OSS_AVAILABLE:
+            print("❌ OSS库不可用，无法下载大文件")
+            return None
             
+        try:
             # OSS配置（使用与大文件客户端相同的配置）
             config_path = '/Users/Apple/Documents/work/data/oss_config.json'
+            if not os.path.exists(config_path):
+                print(f"❌ OSS配置文件不存在: {config_path}")
+                return None
+                
             with open(config_path, 'r') as f:
                 oss_config = json.load(f)
             
