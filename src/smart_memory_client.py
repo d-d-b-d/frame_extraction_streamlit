@@ -12,25 +12,13 @@ import random
 import time
 from typing import Dict, Any, Optional, List
 
-# 导入原始的两个客户端类
 import sys
-import importlib.util
+import os
+sys.path.append('/Users/Apple/task/integrate')
 
-# 动态导入标准接口模块
-spec1 = importlib.util.spec_from_file_location(
-    "get_rosetta_json", 
-    "/Users/Apple/task/integrate/get_rosetta_json.py"
-)
-get_rosetta_json = importlib.util.module_from_spec(spec1)
-spec1.loader.exec_module(get_rosetta_json)
-
-# 动态导入大文件接口模块
-spec2 = importlib.util.spec_from_file_location(
-    "get_rosetta_json_big_backdoor", 
-    "/Users/Apple/task/integrate/get_rosetta_json_big_backdoor.py"
-)
-get_rosetta_json_big_backdoor = importlib.util.module_from_spec(spec2)
-spec2.loader.exec_module(get_rosetta_json_big_backdoor)
+# 直接导入模块而不是动态导入
+from get_rosetta_json import GetRosData as StandardClient
+from get_rosetta_json_big_backdoor import GetRosData as BigFileClient
 
 class SmartMemoryRosettaClient:
     """智能内存版Rosetta数据客户端 - 支持自动故障转移"""
@@ -63,7 +51,7 @@ class SmartMemoryRosettaClient:
     def _init_clients(self):
         """初始化两个客户端实例"""
         try:
-            self.standard_client = get_rosetta_json.GetRosData(
+            self.standard_client = StandardClient(
                 project_id=self.project_id,
                 pool_id=self.pool_id,
                 save_path='/tmp',  # 临时路径，实际不会用到
@@ -76,7 +64,7 @@ class SmartMemoryRosettaClient:
             self.standard_client = None
         
         try:
-            self.bigfile_client = get_rosetta_json_big_backdoor.GetRosData(
+            self.bigfile_client = BigFileClient(
                 project_id=self.project_id,
                 pool_id=self.pool_id,
                 save_path='/tmp',  # 临时路径，实际不会用到
