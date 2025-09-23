@@ -11,26 +11,110 @@ import requests
 import random
 import time
 from typing import Dict, Any, Optional, List
+from requests.exceptions import RequestException, Timeout, ConnectionError
 
+# 移除硬编码的文件路径导入，使用更灵活的方式
 # 导入原始的两个客户端类
 import sys
 import importlib.util
 
-# 动态导入标准接口模块
-spec1 = importlib.util.spec_from_file_location(
-    "get_rosetta_json", 
-    "/Users/Apple/task/integrate/get_rosetta_json.py"
-)
-get_rosetta_json = importlib.util.module_from_spec(spec1)
-spec1.loader.exec_module(get_rosetta_json)
+# 动态导入标准接口模块 - 使用相对路径和错误处理
+def import_rosetta_modules():
+    """尝试导入Rosetta相关模块，失败时创建模拟类"""
+    global get_rosetta_json, get_rosetta_json_big_backdoor
+    
+    try:
+        # 尝试多种路径导入标准接口
+        possible_paths = [
+            "/Users/Apple/task/integrate/get_rosetta_json.py",
+            "../get_rosetta_json.py", 
+            "./get_rosetta_json.py",
+            os.path.join(os.path.dirname(__file__), '../../get_rosetta_json.py'),
+            os.path.join(os.path.dirname(__file__), '../get_rosetta_json.py')
+        ]
+        
+        get_rosetta_json = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                try:
+                    spec = importlib.util.spec_from_file_location("get_rosetta_json", path)
+                    get_rosetta_json = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(get_rosetta_json)
+                    print(f"✅ 成功从 {path} 导入标准接口模块")
+                    break
+                except Exception as e:
+                    print(f"⚠️  从 {path} 导入失败: {e}")
+        
+        if get_rosetta_json is None:
+            # 创建模拟模块
+            class MockGetRosData:
+                def __init__(self, **kwargs):
+                    self.project_id = kwargs.get('project_id')
+                    self.pool_id = kwargs.get('pool_id')
+                    self.save_path = kwargs.get('save_path')
+                    self._type = kwargs.get('_type', 1)
+                    self.is_check_pool = kwargs.get('is_check_pool', False)
+                    self.use_dev = False
+                    self.get_url = 'https://server.rosettalab.top/rosetta-service/project/doneTask/export'
+                    self.req_data = {"projectId": self.project_id, "poolId": self.pool_id, "type": self._type}
+                
+                def get_headers(self):
+                    return {"Content-Type": "application/json"}
+            
+            get_rosetta_json = type('MockModule', (), {'GetRosData': MockGetRosData})()
+            print("⚠️  使用模拟标准接口模块")
+            
+    except Exception as e:
+        print(f"❌ 导入标准接口模块时出错: {e}")
+        get_rosetta_json = None
 
-# 动态导入大文件接口模块
-spec2 = importlib.util.spec_from_file_location(
-    "get_rosetta_json_big_backdoor", 
-    "/Users/Apple/task/integrate/get_rosetta_json_big_backdoor.py"
-)
-get_rosetta_json_big_backdoor = importlib.util.module_from_spec(spec2)
-spec2.loader.exec_module(get_rosetta_json_big_backdoor)
+    try:
+        # 尝试多种路径导入大文件接口
+        possible_paths_big = [
+            "/Users/Apple/task/integrate/get_rosetta_json_big_backdoor.py",
+            "../get_rosetta_json_big_backdoor.py",
+            "./get_rosetta_json_big_backdoor.py", 
+            os.path.join(os.path.dirname(__file__), '../../get_rosetta_json_big_backdoor.py'),
+            os.path.join(os.path.dirname(__file__), '../get_rosetta_json_big_backdoor.py')
+        ]
+        
+        get_rosetta_json_big_backdoor = None
+        for path in possible_paths_big:
+            if os.path.exists(path):
+                try:
+                    spec = importlib.util.spec_from_file_location("get_rosetta_json_big_backdoor", path)
+                    get_rosetta_json_big_backdoor = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(get_rosetta_json_big_backdoor)
+                    print(f"✅ 成功从 {path} 导入大文件接口模块")
+                    break
+                except Exception as e:
+                    print(f"⚠️  从 {path} 导入失败: {e}")
+        
+        if get_rosetta_json_big_backdoor is None:
+            # 创建模拟模块
+            class MockGetRosDataBig:
+                def __init__(self, **kwargs):
+                    self.project_id = kwargs.get('project_id')
+                    self.pool_id = kwargs.get('pool_id')
+                    self.save_path = kwargs.get('save_path')
+                    self._type = kwargs.get('_type', 1)
+                    self.is_check_pool = kwargs.get('is_check_pool', False)
+                    self.use_dev = False
+                    self.get_url = 'https://server.rosettalab.top/rosetta-service/project/doneTask/export/oss'
+                    self.req_data = {"projectId": self.project_id, "poolId": self.pool_id, "type": self._type}
+                
+                def get_headers(self):
+                    return {"Content-Type": "application/json"}
+            
+            get_rosetta_json_big_backdoor = type('MockModule', (), {'GetRosData': MockGetRosDataBig})()
+            print("⚠️  使用模拟大文件接口模块")
+            
+    except Exception as e:
+        print(f"❌ 导入大文件接口模块时出错: {e}")
+        get_rosetta_json_big_backdoor = None
+
+# 执行导入
+import_rosetta_modules()
 
 import importlib.util
 import sys
