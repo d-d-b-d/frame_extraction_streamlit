@@ -7,6 +7,7 @@ import io
 import json
 from typing import Dict, Any, Optional
 from memory_client import MemoryRosettaClient, MemoryFrameExtractor
+from smart_memory_client import SmartMemoryRosettaClient
 
 
 class MemoryExtractionPipeline:
@@ -19,14 +20,29 @@ class MemoryExtractionPipeline:
             config: 配置字典
         """
         self.config = config
-        self.downloader = MemoryRosettaClient(
-            project_id=config['project']['project_id'],
-            pool_id=config['project']['pool_ids'],
-            _type=config['download']['download_type'],
-            is_check_pool=config['download']['check_pool'],
-            username=config['rosetta']['username'],
-            password=config['rosetta']['password']
-        )
+        
+        # 根据配置选择使用智能客户端还是普通内存客户端
+        if config['download'].get('smart_download', True):
+            print("🧠 使用智能下载模式（支持自动故障转移）")
+            self.downloader = SmartMemoryRosettaClient(
+                project_id=config['project']['project_id'],
+                pool_id=config['project']['pool_ids'],
+                _type=config['download']['download_type'],
+                is_check_pool=config['download']['check_pool'],
+                username=config['rosetta']['username'],
+                password=config['rosetta']['password']
+            )
+        else:
+            print("📦 使用标准内存下载模式")
+            self.downloader = MemoryRosettaClient(
+                project_id=config['project']['project_id'],
+                pool_id=config['project']['pool_ids'],
+                _type=config['download']['download_type'],
+                is_check_pool=config['download']['check_pool'],
+                username=config['rosetta']['username'],
+                password=config['rosetta']['password']
+            )
+        
         self.extractor = MemoryFrameExtractor(config)
     
     def process_single_project(self, 

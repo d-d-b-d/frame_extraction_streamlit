@@ -179,6 +179,15 @@ def main():
         enable_extraction = st.checkbox("启用拆帧", value=True,
                                        help="是否执行帧提取操作")
         
+        # 智能下载选项
+        smart_download = st.checkbox("智能下载模式", value=True,
+                                    help="自动选择最优下载接口（标准接口失败时切换到大文件接口）")
+        
+        if smart_download:
+            st.info("🧠 智能下载模式已启用\n\n系统将自动选择最优接口：\n1. 首先尝试标准接口（速度快）\n2. 失败后切换到大文件接口（稳定）")
+        else:
+            st.warning("⚠️ 智能下载模式已关闭\n\n仅使用标准接口，大文件可能下载失败")
+        
         # 账号信息显示
         if is_streamlit_cloud():
             # Streamlit Cloud模式
@@ -317,7 +326,8 @@ def main():
             'password': password,
             'test_mode': test_mode,
             'enable_extraction': enable_extraction,
-            'check_pool': check_pool
+            'check_pool': check_pool,
+            'smart_download': smart_download  # 添加智能下载参数
         }
         
         # 开始处理
