@@ -85,6 +85,8 @@ class SmartMemoryRosettaClient:
         Returns:
             bytes: ZIP文件的二进制数据
         """
+        print(f"🚀 开始智能下载，项目ID: {self.project_id}, 池子ID: {self.pool_id}")
+        
         # 首先尝试标准接口
         if self.standard_client:
             try:
@@ -113,6 +115,8 @@ class SmartMemoryRosettaClient:
                         print("⚠️  标准接口返回空ZIP，尝试大文件接口")
                 else:
                     print(f"⚠️  标准接口响应异常，状态码: {response.status_code}")
+                    if response.status_code == 200:
+                        print(f"响应内容预览: {response.content[:200]}...")
                     
             except requests.exceptions.Timeout:
                 print("⚠️  标准接口请求超时，切换到大文件接口")
@@ -127,6 +131,7 @@ class SmartMemoryRosettaClient:
         if self.bigfile_client:
             try:
                 print("🔄 切换到大文件接口...")
+                print(f"请求数据: {self.bigfile_client.req_data}")
                 
                 # 获取OSS下载信息
                 response = requests.post(
@@ -141,22 +146,30 @@ class SmartMemoryRosettaClient:
                 if response.status_code == 504:
                     print("⚠️  大文件接口也返回504网关超时")
                 elif response.status_code == 200:
-                    data = response.json()
-                    if 'data' in data and len(data['data']) > 0:
-                        oss_file_name = data['data'][0]['zipFileName']
-                        print(f"获取到OSS文件: {oss_file_name}")
+                    try:
+                        data = response.json()
+                        print(f"大文件接口响应数据: {data}")
                         
-                        # 下载OSS文件到内存
-                        zip_data = self._download_oss_file_to_memory(oss_file_name)
-                        if zip_data and not self._is_zip_data_empty(zip_data):
-                            print("✅ 大文件接口下载成功")
-                            return zip_data
+                        if 'data' in data and len(data['data']) > 0:
+                            oss_file_name = data['data'][0]['zipFileName']
+                            print(f"获取到OSS文件: {oss_file_name}")
+                            
+                            # 下载OSS文件到内存
+                            zip_data = self._download_oss_file_to_memory(oss_file_name)
+                            if zip_data and not self._is_zip_data_empty(zip_data):
+                                print("✅ 大文件接口下载成功")
+                                return zip_data
+                            else:
+                                print("⚠️  大文件接口返回空数据")
                         else:
-                            print("⚠️  大文件接口返回空数据")
-                    else:
-                        print("⚠️  大文件接口无数据返回")
+                            print("⚠️  大文件接口无数据返回")
+                            print(f"响应数据结构: {data}")
+                    except json.JSONDecodeError as e:
+                        print(f"❌ 大文件接口响应不是有效的JSON: {str(e)}")
+                        print(f"原始响应内容: {response.text[:500]}...")
                 else:
                     print(f"⚠️  大文件接口响应异常，状态码: {response.status_code}")
+                    print(f"错误响应内容: {response.text[:500]}...")
                     
             except requests.exceptions.Timeout:
                 print("⚠️  大文件接口请求超时")
@@ -164,6 +177,8 @@ class SmartMemoryRosettaClient:
                 print(f"❌ 大文件接口网络错误: {str(e)}")
             except Exception as e:
                 print(f"❌ 大文件接口也失败: {str(e)}")
+                import traceback
+                print(f"详细错误信息: {traceback.format_exc()}")
         else:
             print("⚠️  大文件客户端不可用")
         
@@ -183,10 +198,13 @@ class SmartMemoryRosettaClient:
             # 导入OSS相关库（延迟导入，避免不必要的依赖）
             import oss2
             
-            # OSS配置（使用与大文件客户端相同的配置）
-            config_path = '/Users/Apple/Documents/work/data/oss_config.json'
-            with open(config_path, 'r') as f:
-                oss_config = json.load(f)
+            # OSS配置 - 从Streamlit Cloud secrets获取
+            import streamlit as st
+            oss_config = {
+                'access_key': st.secrets["oss_credentials"]["access_key"],
+                'secret_key': st.secrets["oss_credentials"]["secret_key"]
+            }
+            print("✅ 成功从Streamlit Cloud secrets获取OSS配置")
             
             auth = oss2.Auth(oss_config['access_key'], oss_config['secret_key'])
             bucket_name = 'rosetta-data'
@@ -204,8 +222,17 @@ class SmartMemoryRosettaClient:
             print(f"OSS文件下载完成，大小: {len(file_content)} bytes")
             return file_content
             
+        except ImportError:
+            print("❌ Streamlit库未安装，无法获取OSS配置")
+            return None
+        except KeyError as e:
+            print(f"❌ OSS配置未在Streamlit Cloud secrets中设置：{str(e)}")
+            return None
+        except FileNotFoundError:
+            print("❌ Streamlit Cloud secrets文件未找到，请确保应用在Streamlit Cloud环境中运行")
+            return None
         except Exception as e:
-            print(f"OSS文件下载失败: {str(e)}")
+            print(f"❌ OSS文件下载失败: {str(e)}")
             return None
     
     def _is_zip_data_empty(self, zip_data: bytes) -> bool:
