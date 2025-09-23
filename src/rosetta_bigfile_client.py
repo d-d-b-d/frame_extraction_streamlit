@@ -224,12 +224,13 @@ class RosettaBigFileClient(Auth):
     def get_data(self):
         """下载数据（通过OSS）"""
         print("开始获取OSS文件信息...")
-        
+
         # 第一步：获取OSS文件信息
         resq = requests.post(self.get_url, json=self.req_data, headers=self._get_headers())
-        
+        print("请求参数:", self.req_data)
         print(f"API响应状态码: {resq.status_code}")
-        
+        print("API原始响应文本:", resq.text[:500])  # 防止太长只打印前500字符
+
         if resq.status_code != 200:
             error_msg = f"API请求失败，状态码: {resq.status_code}"
             try:
@@ -239,25 +240,38 @@ class RosettaBigFileClient(Auth):
             except:
                 error_msg += f", 响应: {resq.text[:200]}"
             raise ValueError(error_msg)
-        
+
         # 解析响应数据
-        data = resq.json()
+        try:
+            data = resq.json()
+        except Exception as e:
+            raise ValueError(f"响应不是合法的JSON: {str(e)}, 原始响应: {resq.text[:200]}")
+
+        print("解析后的JSON:", json.dumps(data, ensure_ascii=False, indent=2))
+
         if 'data' not in data or len(data['data']) == 0:
             raise ValueError("API响应中没有文件数据")
-        
+
         # 获取OSS文件路径
-        oss_file_name = data['data'][0]['zipFileName']
-        print(f"获取到OSS文件: {oss_file_name}")
+        # ⚠️ 这里先打印出 data['data'][0]，确认字段名
+        print("data['data'][0]内容:", json.dumps(data['data'][0], ensure_ascii=False, indent=2))
+
+        oss_file_name = data['data'][0].get('zipFileName')  # 用get避免KeyError
+        if not oss_file_name:
+            raise ValueError(f"API返回中找不到zipFileName字段，可用字段有: {list(data['data'][0].keys())}")
         
+        print(f"获取到OSS文件: {oss_file_name}")
+
         # 第二步：从OSS下载文件
         if not self._download_from_oss(oss_file_name, self.save_file):
             raise ValueError("OSS文件下载失败")
-        
+
         # 检查文件是否有效
         if self._is_zip_file_empty(self.save_file) or os.path.getsize(self.save_file) == 160:
             raise ValueError("下载的数据为空或格式错误，请检查项目ID和池子ID是否正确")
-        
+
         print(f"数据下载完成，文件大小: {os.path.getsize(self.save_file)} bytes")
+
 
     def get_unziped_data(self):
         """下载并解压数据"""
