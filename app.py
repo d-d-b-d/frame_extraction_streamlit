@@ -179,7 +179,6 @@ def main():
                                options=["平台格式", "任务格式"],
                                index=1,
                                help="选择导出格式：平台格式(type=0)或任务格式(type=1)")
-        download_type = 0 if export_format == "平台格式" else 1
         
         test_mode = st.checkbox("测试模式", value=False, 
                                help="跳过数据下载，使用已有数据")
@@ -314,6 +313,9 @@ def main():
         if error:
             st.error(error)
             return
+        
+        # 获取导出格式选择
+        download_type = 0 if export_format == "平台格式" else 1
         
         # 准备参数
         params = {
