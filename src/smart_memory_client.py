@@ -1,12 +1,14 @@
 """
 智能内存版Rosetta客户端
-支持自动故障转移，优先使用标准接口，失败后切换到大文件接口
+支持自动故障转移，在标准接口失败时自动切换到大文件接口
 """
 
 import io
 import zipfile
 import json
 import os
+from typing import Dict, Any, Optional, List
+from .memory_client import MemoryRosettaClient
 import requests
 import random
 import time

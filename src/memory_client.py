@@ -123,59 +123,7 @@ class MemoryRosettaClient(GetRosData):
 
 
 class MemoryFrameExtractor:
-    """内存版拆帧处理器"""
-    
-    def extract_frames_from_memory(self, files_dict: Dict[str, bytes]) -> Dict[str, bytes]:
-        """从内存中的文件提取帧信息
-        
-        Args:
-            files_dict: 文件名到文件内容的映射
-            
-        Returns:
-            Dict[str, bytes]: 处理后的文件字典
-        """
-        result_files = {}
-        
-        for filename, content in files_dict.items():
-            if filename.endswith('.json'):
-                try:
-                    # 解析JSON内容
-                    json_data = json.loads(content.decode('utf-8'))
-                    
-                    # 提取帧信息
-                    processed_data = self._extract_frames_from_json(json_data)
-                    
-                    # 将处理后的数据重新编码为JSON
-                    processed_content = json.dumps(
-                        processed_data, 
-                        ensure_ascii=False, 
-                        indent=2
-                    ).encode('utf-8')
-                    
-                    result_files[filename] = processed_content
-                    
-                except (json.JSONDecodeError, KeyError) as e:
-                    print(f"处理文件 {filename} 时出错: {str(e)}")
-                    # 如果处理失败，保留原始文件
-                    result_files[filename] = content
-            else:
-                # 非JSON文件直接保留
-                result_files[filename] = content
-        
-        return result_files
-    
-    def _extract_frames_from_json(self, json_data: Dict[str, Any]) -> Dict[str, Any]:
-        """从JSON数据中提取帧信息
-        
-        Args:
-            json_data: JSON数据
-            
-        Returns:
-            Dict[str, Any]: 处理后的数据
-        """
-        # 这里可以根据实际需求实现具体的拆帧逻辑
-        # 目前只是返回原始数据
-        return json_data
+    """内存版帧提取器"""
     
     def __init__(self, config: Dict[str, Any]):
         """
