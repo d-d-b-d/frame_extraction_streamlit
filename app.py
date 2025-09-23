@@ -174,6 +174,13 @@ def main():
                            help="选择要处理的池子类型：完成池或抽查池")
         check_pool = pool_type == "抽查池"
         
+        # 导出格式选择
+        export_format = st.radio("导出格式", 
+                               options=["平台格式", "任务格式"],
+                               index=1,
+                               help="选择导出格式：平台格式(type=0)或任务格式(type=1)")
+        download_type = 0 if export_format == "平台格式" else 1
+        
         test_mode = st.checkbox("测试模式", value=False, 
                                help="跳过数据下载，使用已有数据")
         enable_extraction = st.checkbox("启用拆帧", value=True,
@@ -317,7 +324,8 @@ def main():
             'password': password,
             'test_mode': test_mode,
             'enable_extraction': enable_extraction,
-            'check_pool': check_pool
+            'check_pool': check_pool,
+            'download_type': download_type
         }
         
         # 开始处理

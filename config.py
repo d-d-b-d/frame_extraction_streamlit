@@ -67,7 +67,7 @@ class StreamlitConfig:
             },
             'download': {
                 'check_pool': params.get('check_pool', False),
-                'download_type': 1,
+                'download_type': params.get('download_type', 1),
                 'save_path': None  # 内存处理，不需要保存路径
             },
             'frame_extraction': {
@@ -102,5 +102,6 @@ class StreamlitConfig:
             'password': 'your_password',
             'test_mode': False,
             'enable_extraction': True,
-            'check_pool': False  # 默认使用完成池
+            'check_pool': False,  # 默认使用完成池
+            'download_type': 1  # 默认任务格式导出
         }

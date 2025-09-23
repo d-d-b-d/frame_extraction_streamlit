@@ -20,7 +20,7 @@ class MemoryRosettaClient(GetRosData):
         Args:
             project_id: 项目ID
             pool_id: 池子ID列表
-            _type: 下载类型，0为平台导出，1为任务导出
+            _type: 导出格式类型，0为平台格式导出，1为任务格式导出
             is_check_pool: 是否检查池子状态
             use_dev: 是否使用开发环境
             username: 用户名
