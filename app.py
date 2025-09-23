@@ -194,16 +194,32 @@ def main():
             try:
                 # 检查是否使用st.secrets
                 st.info("账号信息已通过Streamlit Cloud配置")
+                
+                # 检查OSS配置
+                try:
+                    st.secrets["oss_credentials"]
+                    oss_status = "✅ OSS配置已配置"
+                except (KeyError, FileNotFoundError):
+                    oss_status = "⚠️ OSS配置未配置"
+                
                 with st.expander("ℹ️ 账号配置说明", expanded=False):
-                    st.markdown("""
+                    st.markdown(f"""
                     **当前配置状态：**
                     ✅ 账号信息已配置在Streamlit Cloud中
+                    {oss_status}
                     
                     **如需修改账号：**
                     1. 在Streamlit Cloud中打开应用设置
                     2. 点击"Secrets"选项卡
                     3. 更新rosetta_credentials配置
                     4. 保存并重新部署
+                    
+                    **OSS配置格式：**
+                    ```toml
+                    [oss_credentials]
+                    access_key = "阿里云AccessKey"
+                    secret_key = "阿里云SecretKey"
+                    ```
                     """)
             except (KeyError, FileNotFoundError):
                 st.warning("⚠️ 账号信息未在Streamlit Cloud中配置")
@@ -213,10 +229,19 @@ def main():
                     1. 在Streamlit Cloud中打开应用设置
                     2. 点击"Secrets"选项卡
                     3. 添加以下TOML格式配置：
+                    
+                    **Rosetta账号配置：**
                     ```toml
                     [rosetta_credentials]
                     username = "您的Rosetta用户名"
                     password = "您的Rosetta密码"
+                    ```
+                    
+                    **OSS配置（大文件下载需要）：**
+                    ```toml
+                    [oss_credentials]
+                    access_key = "阿里云AccessKey"
+                    secret_key = "阿里云SecretKey"
                     ```
                     4. 保存并重新部署
                     """)
