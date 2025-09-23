@@ -11,120 +11,26 @@ import requests
 import random
 import time
 from typing import Dict, Any, Optional, List
-from requests.exceptions import RequestException, Timeout, ConnectionError
 
-# 移除硬编码的文件路径导入，使用更灵活的方式
 # 导入原始的两个客户端类
 import sys
 import importlib.util
 
-# 动态导入标准接口模块 - 使用相对路径和错误处理
-def import_rosetta_modules():
-    """尝试导入Rosetta相关模块，失败时创建模拟类"""
-    global get_rosetta_json, get_rosetta_json_big_backdoor
-    
-    try:
-        # 尝试多种路径导入标准接口
-        possible_paths = [
-            "/Users/Apple/task/integrate/get_rosetta_json.py",
-            "../get_rosetta_json.py", 
-            "./get_rosetta_json.py",
-            os.path.join(os.path.dirname(__file__), '../../get_rosetta_json.py'),
-            os.path.join(os.path.dirname(__file__), '../get_rosetta_json.py')
-        ]
-        
-        get_rosetta_json = None
-        for path in possible_paths:
-            if os.path.exists(path):
-                try:
-                    spec = importlib.util.spec_from_file_location("get_rosetta_json", path)
-                    get_rosetta_json = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(get_rosetta_json)
-                    print(f"✅ 成功从 {path} 导入标准接口模块")
-                    break
-                except Exception as e:
-                    print(f"⚠️  从 {path} 导入失败: {e}")
-        
-        if get_rosetta_json is None:
-            # 创建模拟模块
-            class MockGetRosData:
-                def __init__(self, **kwargs):
-                    self.project_id = kwargs.get('project_id')
-                    self.pool_id = kwargs.get('pool_id')
-                    self.save_path = kwargs.get('save_path')
-                    self._type = kwargs.get('_type', 1)
-                    self.is_check_pool = kwargs.get('is_check_pool', False)
-                    self.use_dev = False
-                    self.get_url = 'https://server.rosettalab.top/rosetta-service/project/doneTask/export'
-                    self.req_data = {"projectId": self.project_id, "poolId": self.pool_id, "type": self._type}
-                
-                def get_headers(self):
-                    return {"Content-Type": "application/json"}
-            
-            get_rosetta_json = type('MockModule', (), {'GetRosData': MockGetRosData})()
-            print("⚠️  使用模拟标准接口模块")
-            
-    except Exception as e:
-        print(f"❌ 导入标准接口模块时出错: {e}")
-        get_rosetta_json = None
+# 动态导入标准接口模块
+spec1 = importlib.util.spec_from_file_location(
+    "get_rosetta_json", 
+    "/Users/Apple/task/integrate/get_rosetta_json.py"
+)
+get_rosetta_json = importlib.util.module_from_spec(spec1)
+spec1.loader.exec_module(get_rosetta_json)
 
-    try:
-        # 尝试多种路径导入大文件接口
-        possible_paths_big = [
-            "/Users/Apple/task/integrate/get_rosetta_json_big_backdoor.py",
-            "../get_rosetta_json_big_backdoor.py",
-            "./get_rosetta_json_big_backdoor.py", 
-            os.path.join(os.path.dirname(__file__), '../../get_rosetta_json_big_backdoor.py'),
-            os.path.join(os.path.dirname(__file__), '../get_rosetta_json_big_backdoor.py')
-        ]
-        
-        get_rosetta_json_big_backdoor = None
-        for path in possible_paths_big:
-            if os.path.exists(path):
-                try:
-                    spec = importlib.util.spec_from_file_location("get_rosetta_json_big_backdoor", path)
-                    get_rosetta_json_big_backdoor = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(get_rosetta_json_big_backdoor)
-                    print(f"✅ 成功从 {path} 导入大文件接口模块")
-                    break
-                except Exception as e:
-                    print(f"⚠️  从 {path} 导入失败: {e}")
-        
-        if get_rosetta_json_big_backdoor is None:
-            # 创建模拟模块
-            class MockGetRosDataBig:
-                def __init__(self, **kwargs):
-                    self.project_id = kwargs.get('project_id')
-                    self.pool_id = kwargs.get('pool_id')
-                    self.save_path = kwargs.get('save_path')
-                    self._type = kwargs.get('_type', 1)
-                    self.is_check_pool = kwargs.get('is_check_pool', False)
-                    self.use_dev = False
-                    self.get_url = 'https://server.rosettalab.top/rosetta-service/project/doneTask/export/oss'
-                    self.req_data = {"projectId": self.project_id, "poolId": self.pool_id, "type": self._type}
-                
-                def get_headers(self):
-                    return {"Content-Type": "application/json"}
-            
-            get_rosetta_json_big_backdoor = type('MockModule', (), {'GetRosData': MockGetRosDataBig})()
-            print("⚠️  使用模拟大文件接口模块")
-            
-    except Exception as e:
-        print(f"❌ 导入大文件接口模块时出错: {e}")
-        get_rosetta_json_big_backdoor = None
-
-# 执行导入
-import_rosetta_modules()
-
-import importlib.util
-import sys
-import os
-import requests
-import zipfile
-import io
-import json
-from typing import Dict, Optional
-from requests.exceptions import RequestException, Timeout, ConnectionError
+# 动态导入大文件接口模块
+spec2 = importlib.util.spec_from_file_location(
+    "get_rosetta_json_big_backdoor", 
+    "/Users/Apple/task/integrate/get_rosetta_json_big_backdoor.py"
+)
+get_rosetta_json_big_backdoor = importlib.util.module_from_spec(spec2)
+spec2.loader.exec_module(get_rosetta_json_big_backdoor)
 
 class SmartMemoryRosettaClient:
     """智能内存版Rosetta数据客户端 - 支持自动故障转移"""
@@ -198,15 +104,15 @@ class SmartMemoryRosettaClient:
                     self.standard_client.get_url,
                     json=self.standard_client.req_data,
                     headers=self.standard_client.get_headers(),
-                    timeout=30  # 添加超时时间
+                    timeout=30  # 添加超时设置
                 )
                 
                 print(f"标准接口响应状态码: {response.status_code}")
                 print(f"标准接口响应大小: {len(response.content)} bytes")
                 
-                # 处理504超时错误
+                # 处理504网关超时错误
                 if response.status_code == 504:
-                    print("⚠️  标准接口超时(504)，将自动切换到大文件接口")
+                    print("⚠️  标准接口504网关超时，立即切换到大文件接口")
                 elif response.status_code == 200 and len(response.content) > 160:
                     # 检查是否为空ZIP
                     if not self._is_zip_data_empty(response.content):
@@ -217,12 +123,12 @@ class SmartMemoryRosettaClient:
                 else:
                     print(f"⚠️  标准接口响应异常，状态码: {response.status_code}")
                     
-            except (Timeout, ConnectionError) as e:
-                print(f"⚠️  标准接口连接超时或失败: {str(e)}，将切换到大文件接口")
-            except RequestException as e:
-                print(f"❌ 标准接口请求失败: {str(e)}")
+            except requests.exceptions.Timeout:
+                print("⚠️  标准接口请求超时，切换到大文件接口")
+            except requests.exceptions.RequestException as e:
+                print(f"❌ 标准接口网络错误: {str(e)}")
             except Exception as e:
-                print(f"❌ 标准接口其他错误: {str(e)}")
+                print(f"❌ 标准接口失败: {str(e)}")
         else:
             print("⚠️  标准客户端不可用，直接尝试大文件接口")
         
@@ -241,7 +147,9 @@ class SmartMemoryRosettaClient:
                 
                 print(f"大文件接口响应状态码: {response.status_code}")
                 
-                if response.status_code == 200:
+                if response.status_code == 504:
+                    print("⚠️  大文件接口也返回504网关超时")
+                elif response.status_code == 200:
                     data = response.json()
                     if 'data' in data and len(data['data']) > 0:
                         oss_file_name = data['data'][0]['zipFileName']
@@ -259,6 +167,10 @@ class SmartMemoryRosettaClient:
                 else:
                     print(f"⚠️  大文件接口响应异常，状态码: {response.status_code}")
                     
+            except requests.exceptions.Timeout:
+                print("⚠️  大文件接口请求超时")
+            except requests.exceptions.RequestException as e:
+                print(f"❌ 大文件接口网络错误: {str(e)}")
             except Exception as e:
                 print(f"❌ 大文件接口也失败: {str(e)}")
         else:
@@ -342,27 +254,10 @@ class SmartMemoryRosettaClient:
             Dict[str, bytes]: 文件路径到文件内容的映射
         """
         print("开始智能下载数据到内存...")
+        zip_data = self.smart_download()
+        print("数据下载完成，开始解压到内存...")
         
-        # 添加重试机制
-        max_retries = 2
-        for attempt in range(max_retries):
-            try:
-                zip_data = self.smart_download()
-                print("数据下载完成，开始解压到内存...")
-                
-                files = self.extract_zip_to_memory(zip_data)
-                print(f"数据解压完成，共 {len(files)} 个文件")
-                
-                return files
-                
-            except Exception as e:
-                print(f"第 {attempt + 1} 次尝试失败: {str(e)}")
-                if attempt < max_retries - 1:
-                    print(f"等待 {2 ** attempt} 秒后重试...")
-                    import time
-                    time.sleep(2 ** attempt)  # 指数退避
-                else:
-                    print("所有重试都失败了")
-                    raise
+        files = self.extract_zip_to_memory(zip_data)
+        print(f"数据解压完成，共 {len(files)} 个文件")
         
-        raise Exception("下载失败，已达到最大重试次数")
+        return files

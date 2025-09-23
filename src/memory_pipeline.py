@@ -6,8 +6,8 @@
 import io
 import json
 from typing import Dict, Any, Optional
-from .memory_client import MemoryRosettaClient, MemoryFrameExtractor
-from .smart_memory_client import SmartMemoryRosettaClient
+from memory_client import MemoryRosettaClient, MemoryFrameExtractor
+from smart_memory_client import SmartMemoryRosettaClient
 
 
 class MemoryExtractionPipeline:
@@ -64,10 +64,6 @@ class MemoryExtractionPipeline:
         pool_ids = pool_ids or self.config['project']['pool_ids']
         project_name = project_name or self.config['project'].get('project_name_cn') or str(project_id)
         
-        print(f"开始处理项目: {project_name} (ID: {project_id})")
-        print(f"池子ID: {pool_ids}")
-        print(f"使用{'智能' if self.config['download'].get('smart_download', True) else '标准'}下载模式")
-        
         # 调试模式检查
         if self.config['debug']['test_mode']:
             print("【测试模式】跳过数据下载，使用模拟数据")
@@ -80,52 +76,61 @@ class MemoryExtractionPipeline:
                 'message': '测试模式：使用模拟数据'
             }
         
+        # 下载数据到内存
+        print(f"开始下载项目 {project_id} 的数据到内存...")
         try:
-            # 下载数据到内存
-            print(f"开始下载项目 {project_id} 的数据到内存...")
             files_dict = self.downloader.get_project_data_to_memory()
             print(f"数据下载完成，共 {len(files_dict)} 个文件")
-            
-            # 检查是否启用拆帧
-            if not self.config['frame_extraction']['enabled']:
-                print("拆帧功能已禁用，跳过拆帧步骤")
-                return {
-                    'project_id': str(project_id),
-                    'files': files_dict,
-                    'frame_extraction': False,
-                    'status': 'completed_without_extraction',
-                    'message': '处理完成（未启用拆帧）'
-                }
-            
-            # 执行拆帧（在内存中）
-            print("开始在内存中执行拆帧...")
-            processed_files = self.extractor.extract_frames_from_memory(files_dict)
-            print(f"拆帧完成，共 {len(processed_files)} 个文件")
-            
-            return {
-                'project_id': str(project_id),
-                'files': processed_files,
-                'frame_extraction': True,
-                'status': 'completed',
-                'message': '处理完成'
-            }
-            
         except Exception as e:
             error_msg = str(e)
-            print(f"❌ 项目处理失败: {error_msg}")
-            
-            # 提供更详细的错误信息
-            if "504" in error_msg or "超时" in error_msg:
-                error_msg += "（建议检查网络连接或稍后重试）"
+            if "504" in error_msg or "Gateway Time-out" in error_msg:
+                print(f"❌ 网关超时错误 (504): {error_msg}")
+                return {
+                    'project_id': str(project_id),
+                    'error': error_msg,
+                    'status': 'failed_gateway_timeout',
+                    'message': '下载超时：网关错误 (504)，请稍后重试或检查网络连接'
+                }
             elif "所有下载接口都失败" in error_msg:
-                error_msg += "（建议检查项目ID和池子ID是否正确）"
-            
+                print(f"❌ 所有下载接口都失败: {error_msg}")
+                return {
+                    'project_id': str(project_id),
+                    'error': error_msg,
+                    'status': 'failed_all_interfaces',
+                    'message': '所有下载接口都失败，请检查项目ID、池子ID和网络连接'
+                }
+            else:
+                print(f"❌ 数据下载失败: {error_msg}")
+                return {
+                    'project_id': str(project_id),
+                    'error': error_msg,
+                    'status': 'failed_download',
+                    'message': f'数据下载失败: {error_msg}'
+                }
+        
+        # 检查是否启用拆帧
+        if not self.config['frame_extraction']['enabled']:
+            print("拆帧功能已禁用，跳过拆帧步骤")
             return {
                 'project_id': str(project_id),
-                'error': error_msg,
-                'status': 'failed',
-                'message': f'处理失败: {error_msg}'
+                'files': files_dict,
+                'frame_extraction': False,
+                'status': 'completed_without_extraction',
+                'message': '处理完成（未启用拆帧）'
             }
+        
+        # 执行拆帧（在内存中）
+        print("开始在内存中执行拆帧...")
+        processed_files = self.extractor.extract_frames_from_memory(files_dict)
+        print(f"拆帧完成，共 {len(processed_files)} 个文件")
+        
+        return {
+            'project_id': str(project_id),
+            'files': processed_files,
+            'frame_extraction': True,
+            'status': 'completed',
+            'message': '处理完成'
+        }
     
     def process_multiple_projects(self, projects: list) -> list:
         """批量处理多个项目
