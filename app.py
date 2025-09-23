@@ -237,7 +237,7 @@ def main():
                     password = "您的Rosetta密码"
                     ```
                     
-                    **OSS配置（大文件下载需要）：**
+                    **OSS配置（大文件下载必需）：**
                     ```toml
                     [oss_credentials]
                     access_key = "阿里云AccessKey"
@@ -247,25 +247,28 @@ def main():
                     """)
         else:
             # 本地运行模式
-            st.warning("⚠️ 此应用设计为仅在Streamlit Cloud中运行")
-            with st.expander("🔧 部署指导", expanded=False):
-                st.markdown("""
-                **本地运行说明：**
-                此应用专为Streamlit Cloud设计，如需本地运行：
-                
-                **选项1：创建本地secrets.toml文件**
-                在`.streamlit/secrets.toml`中添加：
-                ```toml
-                [rosetta_credentials]
-                username = "您的Rosetta用户名"
-                password = "您的Rosetta密码"
-                ```
-                
-                **选项2：部署到Streamlit Cloud**
-                1. 将代码推送到Git仓库
-                2. 在Streamlit Cloud中创建新应用
-                3. 在应用设置中配置Secrets
-                """)
+            st.error("❌ 此应用仅支持在Streamlit Cloud中运行")
+            st.info("🔧 本地运行不支持，请部署到Streamlit Cloud")
+            st.markdown("""
+            **部署到Streamlit Cloud步骤：**
+            1. 将代码推送到Git仓库
+            2. 在Streamlit Cloud中创建新应用
+            3. 在应用设置中配置以下Secrets：
+            
+            **Rosetta账号配置：**
+            ```toml
+            [rosetta_credentials]
+            username = "您的Rosetta用户名"
+            password = "您的Rosetta密码"
+            ```
+            
+            **OSS配置（大文件下载必需）：**
+            ```toml
+            [oss_credentials]
+            access_key = "阿里云AccessKey"
+            secret_key = "阿里云SecretKey"
+            ```
+            """)
     
     # 主要内容区域
     col1, col2 = st.columns([2, 1])

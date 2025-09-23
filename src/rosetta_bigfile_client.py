@@ -135,9 +135,9 @@ class RosettaBigFileClient(Auth):
             return True
 
     def _get_oss_config(self):
-        """获取OSS配置 - 优先从Streamlit Cloud secrets获取"""
+        """获取OSS配置 - 仅从Streamlit Cloud secrets获取"""
         try:
-            # 首先尝试从Streamlit Cloud的secrets获取
+            # 从Streamlit Cloud的secrets获取OSS配置
             import streamlit as st
             oss_config = {
                 'access_key': st.secrets["oss_credentials"]["access_key"],
@@ -145,16 +145,12 @@ class RosettaBigFileClient(Auth):
             }
             print("✅ 成功从Streamlit Cloud secrets获取OSS配置")
             return oss_config
-        except (ImportError, KeyError, FileNotFoundError):
-            # 如果Streamlit Cloud不可用，尝试本地文件
-            try:
-                config_path = '/Users/Apple/Documents/work/data/oss_config.json'
-                with open(config_path, 'r') as f:
-                    config = json.load(f)
-                print("ℹ️ 从本地文件获取OSS配置")
-                return config
-            except Exception as e:
-                raise ValueError(f"无法获取OSS配置：既无法从Streamlit Cloud secrets读取，也无法从本地文件读取。错误：{str(e)}")
+        except ImportError:
+            raise ValueError("Streamlit库未安装，无法获取OSS配置")
+        except KeyError as e:
+            raise ValueError(f"OSS配置未在Streamlit Cloud secrets中设置：{str(e)}。请在Streamlit Cloud的Secrets中添加[oss_credentials]配置")
+        except FileNotFoundError:
+            raise ValueError("Streamlit Cloud secrets文件未找到，请确保应用在Streamlit Cloud环境中运行")
 
     def _download_from_oss(self, oss_file_name: str, save_path: str) -> bool:
         """从OSS下载文件
